@@ -6,3 +6,4 @@ streamlit_autorefresh
 pyvis
 networkx
 fsspec
+s3fs
