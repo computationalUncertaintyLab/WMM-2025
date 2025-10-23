@@ -1,0 +1,7 @@
+pandas
+boto3
+streamlit
+streamlit_player
+streamlit_autorefresh
+pyvis
+networkx
