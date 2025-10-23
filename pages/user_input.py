@@ -285,8 +285,6 @@ def show():
         st.warning("🚫 You must log in first.")
         st.stop()   # Prevents rest of the page from rendering
     
-    #--SESSION STATE DATA
-    st.session_state.dataset = pd.read_csv("./dataset/interactions.csv")
 
     if 'page_load_time' not in st.session_state:
         st.session_state.page_load_time = datetime.now()
