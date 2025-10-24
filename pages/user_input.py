@@ -15,13 +15,11 @@ def validate_input(email):
     pattern2 = r'^[A-Za-z]+\d+[A-Za-z]+$'
     return re.match(pattern, email) or re.match(pattern2, email)
 
-def save_dataset_to_csv_and_s3(dataset):
-    """Save dataset to both local CSV and AWS S3 bucket"""
-    # Save locally
-    #local_path = "./dataset/interactions.csv"
-    #dataset.to_csv(local_path, index=False)
+def save_dataset_to_csv_and_s3(new_row_df):
+    """Save new row to dataset in S3 with concurrency protection"""
+    # Read the latest data from S3, append the new row, and save back
+    # This prevents race conditions when multiple users submit simultaneously
     
-    # Save to S3
     try:
         AWS_S3_BUCKET         = "wmm-2025"
         AWS_ACCESS_KEY_ID     = st.secrets["AWS_ACCESS_KEY_ID"]
@@ -33,9 +31,21 @@ def save_dataset_to_csv_and_s3(dataset):
             aws_secret_access_key=AWS_SECRET_ACCESS_KEY
         )
         
-        # Upload to S3
-        s3_client.put_object(Bucket=AWS_S3_BUCKET, Key="interactions.csv", Body=dataset.to_csv(index=False).encode('utf-8'))
+        # Read the current data from S3 (get the latest version)
+        from io import BytesIO
+        s3_obj = s3_client.get_object(Bucket=AWS_S3_BUCKET, Key="interactions.csv")
+        latest_dataset = pd.read_csv(BytesIO(s3_obj['Body'].read()))
+        
+        # Append the new row
+        updated_dataset = pd.concat([latest_dataset, new_row_df], ignore_index=True)
+        
+        # Upload the updated dataset to S3
+        s3_client.put_object(Bucket=AWS_S3_BUCKET, Key="interactions.csv", Body=updated_dataset.to_csv(index=False).encode('utf-8'))
         print(f"Successfully uploaded to S3: {AWS_S3_BUCKET}/interactions.csv")
+        
+        # Update session state with the latest data
+        st.session_state.dataset = updated_dataset
+        
     except Exception as e:
         print(f"Warning: Failed to upload to S3: {str(e)}")
         # Don't fail the whole operation if S3 upload fails
@@ -178,11 +188,9 @@ def add_user_data_to_database( actor, audience , infection_or_intervention = Non
                                        , "timestamp"              :[current_date_time]}
                         st.success(f"Thank you for submitting your information to WMM. The user {audience} was *NOT* infected!")
                         
-                    interactions = pd.concat([interactions, pd.DataFrame(new_row)], ignore_index=True)
-                        
-                    #--UPDATE state and write out
-                    st.session_state.dataset = interactions
-                    save_dataset_to_csv_and_s3(st.session_state.dataset)
+                    #--UPDATE state and write out (with concurrency protection)
+                    new_row_df = pd.DataFrame(new_row)
+                    save_dataset_to_csv_and_s3(new_row_df)
         else:
             st.error("One or both of the fields is missing input. Please ensure both emails are entered correctly.")
     #--INTERVENTION------------------------------------------------------------------------------------------------------------
@@ -227,13 +235,10 @@ def add_user_data_to_database( actor, audience , infection_or_intervention = Non
                                     , "intervention_value"    :[ intervention_value_random ]
                                     , "intervention_type"     :[intervention_type]
                                     , "timestamp"             :[current_date_time]}
-                    interactions = pd.concat([interactions, pd.DataFrame(new_row)], ignore_index=True)
 
-                    #--UPDATE state and write out 
-                    st.session_state.dataset = interactions
-                    save_dataset_to_csv_and_s3(st.session_state.dataset)
-
-                    print(interactions)
+                    #--UPDATE state and write out (with concurrency protection)
+                    new_row_df = pd.DataFrame(new_row)
+                    save_dataset_to_csv_and_s3(new_row_df)
 
                     st.success("Thank you for submitting your information to WMM2. This intervention event has been stored successfully!")
         else:
