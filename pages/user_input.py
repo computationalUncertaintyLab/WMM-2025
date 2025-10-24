@@ -108,6 +108,8 @@ def add_user_data_to_database( actor, audience , infection_or_intervention = Non
         if audience and actor:  # Check if not null
             if audience == actor:
                 st.error("The audience and actor usernames cannot be the same. Please enter different usernames.")
+            elif audience.lower() == "exp626":
+                st.error("The username 'exp626' cannot be used as the audience.")
             else:
                 valid_audience = validate_input(audience)
                 valid_actor    = validate_input(actor)
@@ -186,6 +188,10 @@ def add_user_data_to_database( actor, audience , infection_or_intervention = Non
     #--INTERVENTION------------------------------------------------------------------------------------------------------------
     else:
         if audience and actor:  # Check if not null
+            if audience.lower() == "exp626":
+                st.error("The username 'exp626' cannot be used as the audience.")
+                return
+                
             valid_audience = validate_input(audience)
 
             audience_interventions = interactions.loc[(interactions.Audience==audience) & (interactions.infection_intervention==0)]
