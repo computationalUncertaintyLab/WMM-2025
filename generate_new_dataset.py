@@ -20,7 +20,7 @@ if __name__ == "__main__":
     )
 
     d = pd.DataFrame({ "Actor"   :["exp626",'thm220']
-                      ,"Audience":["thm220",'gms223']
+                      ,"Audience":["thm220",'gms221']
                       ,"infection_intervention":[1,1]
                       ,"success"               :[1,1]
                       ,"intervention_value"    :[np.nan,np.nan]
