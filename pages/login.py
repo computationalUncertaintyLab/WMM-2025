@@ -39,7 +39,7 @@ def page_info():
                 In addition, your connections to others will be used in class to simulate an outbreak to understand the mathematics of the spread of disease over a contact network. 
 
 
-                **Contacts and Questions**: The Institutional Review Board (IRB) for the protection of human research participants at Lehigh University has reviewed and approved this study. If you have questions about the research study itself, please contact the Investigators: Gabrielle String (gms221@lehigh.edu), Jeffrey Olimpo (jto224@lehigh.edu), and Thomas McAndrew (mcandrew@lehigh.edu). If you have questions about your rights or would simply like to speak with someone other than the research team about the questions or concerns, please contact the IRB at (610) 758-2871 or inirb@lehigh.edu. All reports or correspondence will be kept confidential.
+                **Contacts and Questions**: If you have questions about the research study itself, please contact the Investigators: Gabrielle String (gms221@lehigh.edu), Jeffrey Olimpo (jto224@lehigh.edu), and Thomas McAndrew (mcandrew@lehigh.edu). If you have questions about your rights or would simply like to speak with someone other than the research team about questions or concerns, please contact the IRB at (610) 758-2871 or inirb@lehigh.edu. All reports or correspondence will be kept confidential.
 
                 **Statement of Consent:** I have read the above information. I have had the opportunity to ask questions and have my questions answered. By adding my Lehigh Username, I consent to participate in this study.
 

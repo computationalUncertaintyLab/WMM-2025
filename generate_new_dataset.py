@@ -29,5 +29,3 @@ if __name__ == "__main__":
 
     s3_client.put_object(Bucket=AWS_S3_BUCKET, Key="interactions.csv", Body=d.to_csv(index=False).encode('utf-8'))
 
-    d.to_csv("./dataset/interactions.csv", index=False)
-    
