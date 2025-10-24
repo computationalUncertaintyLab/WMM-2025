@@ -281,11 +281,38 @@ def intervention_viz():
     # Show the cumulative plots
     show_cumulative_plots()
 
+def refresh_data_from_s3():
+    """Refresh the dataset from S3 to get the latest data"""
+    try:
+        import boto3
+        from io import BytesIO
+        
+        AWS_S3_BUCKET = "wmm-2025"
+        AWS_ACCESS_KEY_ID = st.secrets["AWS_ACCESS_KEY_ID"]
+        AWS_SECRET_ACCESS_KEY = st.secrets["AWS_SECRET_ACCESS_KEY"]
+        
+        s3_client = boto3.client(
+            "s3",
+            aws_access_key_id=AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=AWS_SECRET_ACCESS_KEY
+        )
+        
+        # Read the latest data from S3
+        s3_obj = s3_client.get_object(Bucket=AWS_S3_BUCKET, Key="interactions.csv")
+        st.session_state.dataset = pd.read_csv(BytesIO(s3_obj['Body'].read()))
+        
+    except Exception as e:
+        print(f"Warning: Failed to refresh data from S3: {str(e)}")
+        # If refresh fails, continue with existing session data
+
 def show():
     #--LOGIN GATE
     if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
         st.warning("🚫 You must log in first.")
         st.stop()   # Prevents rest of the page from rendering
+    
+    # Refresh data from S3 to get the latest updates
+    refresh_data_from_s3()
     
     with st.container(border=True):
         cols = st.columns(1, border=False)
