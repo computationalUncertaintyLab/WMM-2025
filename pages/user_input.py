@@ -128,7 +128,7 @@ def add_user_data_to_database( actor, audience , infection_or_intervention = Non
                             return
 
                     #--Check if actor is contagious
-                    if actor not in interactions.loc[interactions.infection_intervention==1,"Audience"].unique():
+                    if actor not in interactions.loc[(interactions.infection_intervention==1) & (interactions.success==1),"Audience"].unique():
                         st.error(f"{actor} is not eligible to infect others as they have not been infected yet.")
                         return 
 
