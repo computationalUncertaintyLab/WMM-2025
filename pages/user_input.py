@@ -125,7 +125,8 @@ def add_user_data_to_database( actor, audience , infection_or_intervention = Non
 
                         if ((time_right_now - datetime.strptime(last_interaction_between_two,"%Y-%m-%d %H:%M:%S")).seconds / (60)) < 1.:
                             st.warning(f"An event between {actor} and {audience} has taken place under a minute. There is a 60 second cool down between events of the same pair.")
-                    
+                            return
+
                     #--Check if actor is contagious
                     if actor not in interactions.loc[interactions.infection_intervention==1,"Audience"].unique():
                         st.error(f"{actor} is not eligible to infect others as they have not been infected yet.")
@@ -138,13 +139,15 @@ def add_user_data_to_database( actor, audience , infection_or_intervention = Non
                         return 
 
                     #--Attmept an infection event
-                    interventions_applied_to_audience = interactions.loc[ (interactions.Audience == audience) & (interactions.infection_intervention==0) ].dropna() #<-- This is to remove times that person was contacte and never infected
+                    interventions_applied_to_audience = interactions.loc[ (interactions.Audience == audience) & (interactions.infection_intervention==0) ] #<-- This is to remove times that person was contacte and never infected
                     INFECTION_BASELINE = 0.50 #<--this is the baseline probability of infection
                     
                     intervention = INFECTION_BASELINE
+                    print(interventions_applied_to_audience)
                     if len(interventions_applied_to_audience) > 0:
                         intervention = INFECTION_BASELINE*np.prod(1. - interventions_applied_to_audience.intervention_value.values)
                         
+                    print(f"Intervention: {intervention}")
                     if np.random.random() < intervention:
                         #--Add new INFECTION record
                         current_date_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -188,7 +191,7 @@ def add_user_data_to_database( actor, audience , infection_or_intervention = Non
             audience_interventions = interactions.loc[(interactions.Audience==audience) & (interactions.infection_intervention==0)]
 
             #--is the audience member already infected?
-            audience_infected      = interactions.loc[ (interactions.Audience==audience) & (interactions.infection_intervention==1)]
+            audience_infected      = interactions.loc[ (interactions.Audience==audience) & (interactions.infection_intervention==1) & (interactions.success==1)]
             if len(audience_infected)>0:
                 audience_infected=1
             else:
@@ -244,7 +247,7 @@ def infection_page():
 
         cols = st.columns(2,border=False)
         with cols[0]:
-            infectorEmail = st.text_input("Infector (i am the one who is infecting someone)", key="infectorEmail", placeholder = st.session_state["username"] , help = "Put your username here if you infected someone ")
+            infectorEmail = st.text_input("Infector (i am the one who is infecting someone)", key="infectorEmail", value = st.session_state["username"] , help = "Put your username here if you infected someone ")
             infectorEmail = infectorEmail.lower().strip()
         with cols[1]:
             infecteeEmail = st.text_input("Infectee (i am going to be infected)", key="infecteeEmail", placeholder = "ABC123", help = "Put your username here if you were infected")

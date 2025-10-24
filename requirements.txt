@@ -7,3 +7,4 @@ pyvis
 networkx
 fsspec
 s3fs
+plotly
