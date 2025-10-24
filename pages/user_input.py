@@ -109,6 +109,25 @@ def add_user_data_to_database( actor, audience , infection_or_intervention = Non
     import numpy as np
     from datetime import datetime, timedelta
     from time import sleep
+    from io import BytesIO
+
+    # Refresh dataset from S3 to get latest data before validation
+    try:
+        AWS_S3_BUCKET = "wmm-2025"
+        AWS_ACCESS_KEY_ID = st.secrets["AWS_ACCESS_KEY_ID"]
+        AWS_SECRET_ACCESS_KEY = st.secrets["AWS_SECRET_ACCESS_KEY"]
+        
+        s3_client = boto3.client(
+            "s3",
+            aws_access_key_id=AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=AWS_SECRET_ACCESS_KEY
+        )
+        
+        s3_obj = s3_client.get_object(Bucket=AWS_S3_BUCKET, Key="interactions.csv")
+        st.session_state.dataset = pd.read_csv(BytesIO(s3_obj['Body'].read()))
+    except Exception as e:
+        print(f"Warning: Could not refresh data from S3: {str(e)}")
+        # Continue with existing session data if refresh fails
 
     interactions              = st.session_state.dataset
     infection_or_intervention = 1 if infection_or_intervention else 0
