@@ -14,7 +14,7 @@ def attach_WMM_data():
         st.session_state.dataset = pd.read_csv(f"s3://{AWS_S3_BUCKET}/interactions.csv"
                                               ,storage_options={"key"   : AWS_ACCESS_KEY_ID,"secret": AWS_SECRET_ACCESS_KEY})
     if 'intervention_group' not in st.session_state:
-        intervention_group = pd.read_csv(f"s3://{AWS_S3_BUCKET}/intervention_group.csv"
+        intervention_group = pd.read_csv(f"s3://{AWS_S3_BUCKET}/intervention_group_2025.csv"
                                                           ,storage_options={"key"   : AWS_ACCESS_KEY_ID,"secret": AWS_SECRET_ACCESS_KEY})
         st.session_state.intervention_group = intervention_group.username.unique()
 

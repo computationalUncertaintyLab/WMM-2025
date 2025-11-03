@@ -53,58 +53,84 @@ def save_dataset_to_csv_and_s3(new_row_df):
 
 
 
-def infection_email(audience):
-    import smtplib
+def infection_email(audience, actor, success=True):
+    """Send infection notification email using OAuth 2.0"""
+    import base64
     from email.mime.text import MIMEText
-    from email.mime.multipart import MIMEMultipart
+    from google.oauth2.credentials import Credentials
+    from google.auth.transport.requests import Request
+    from googleapiclient.discovery import build
 
     FROM = "thm220@lehigh.edu"
     TO = f"{audience}@lehigh.edu"
     
-    subject = "You were infected with Watermelon Meow Meow"
-    
-    body = """
-You have been infected with Watermelon Meow Meow!
+    if success:
+        subject = "You were infected with Watermelon Meow Meow"
+        body = f"""You have been infected with Watermelon Meow Meow!
 
-Please visit the game website to view your infection status and continue playing.
+You have been Infected by: {actor}
 
-Good luck!
+Instructions
+
+1. You can infect students, staff, or professors, anyone with a lehigh account. You are also allowed to infect more than one person at a time. The only rule is that you need to be INPERSON with the individual(s). 
+2. Open up this link https://wmm-2025.streamlit.app/ and login with your Lehigh username (the letters and numbers before @lehigh.edu).
+3. Navigate to “User Input”
+4. You should explain that lehigh usernames will be included in a public facing app.
+5. Watch together the 1-min video.
+6. Add your name to the Infector textbox, the person you are infecting to the “Infectee” text box and press submit.
+
+- The WMM Team
+"""
+    else:
+        subject = "Watermelon Meow Meow - Contact Attempt"
+        body = f"""Someone attempted to infect you with Watermelon Meow Meow!
+
+Contact from: {actor}
+
+Good news - you were NOT infected this time! However, you are still at risk.
+
+Please visit https://wmm-2025.streamlit.app/ to view your status.
+
+Stay safe!
 
 - The WMM Team
 """
 
-    # Create message
-    message = MIMEMultipart()
-    message['From'] = FROM
-    message['To'] = TO
-    message['Subject'] = subject
-    message.attach(MIMEText(body, 'plain'))
-    
     try:
-        # Connect to Gmail SMTP server (Lehigh uses Google)
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
+        # Get OAuth credentials from Streamlit secrets
+        credentials = Credentials(
+            token=None,
+            refresh_token=st.secrets["gmail_refresh_token"],
+            client_id=st.secrets["gmail_client_id"],
+            client_secret=st.secrets["gmail_client_secret"],
+            token_uri="https://oauth2.googleapis.com/token",
+            scopes=['https://www.googleapis.com/auth/gmail.send']
+        )
         
-        # You'll need to set up authentication - options:
-        # 1. Use Streamlit secrets (recommended):
-        #    In .streamlit/secrets.toml add: email_password = "your_app_password"
-        #    Then uncomment: server.login(FROM, st.secrets["email_password"])
-        # 2. Use environment variable:
-        #    server.login(FROM, os.environ.get("EMAIL_PASSWORD"))
-        # 
-        # Note: You'll need to generate an App Password from your Google Account
-        # (Account Settings > Security > 2-Step Verification > App passwords)
-        # server.login(FROM, password)  # Uncomment and add authentication when ready
+        # Refresh the access token
+        credentials.refresh(Request())
         
-        server.send_message(message)
-        server.quit()
+        # Build Gmail API service
+        service = build('gmail', 'v1', credentials=credentials)
+        
+        # Create message
+        message = MIMEText(body)
+        message['to'] = TO
+        message['from'] = FROM
+        message['subject'] = subject
+        raw = base64.urlsafe_b64encode(message.as_bytes())
+        email_message = {'raw': raw.decode()}
+        
+        # Send message
+        service.users().messages().send(userId="me", body=email_message).execute()
         print(f"Email successfully sent to {TO}")
         return True
+        
     except Exception as e:
         print(f"Failed to send email: {str(e)}")
         return False
 
-def add_user_data_to_database( actor, audience , infection_or_intervention = None, intervention_type = "Infection" ):
+def add_user_data_to_database( actor, audience , infection_or_intervention = None, intervention_type = "Infection" , intervention_data = None):
     import pandas as pd
     import numpy as np
     from datetime import datetime, timedelta
@@ -177,7 +203,10 @@ def add_user_data_to_database( actor, audience , infection_or_intervention = Non
                     print(interventions_applied_to_audience)
                     if len(interventions_applied_to_audience) > 0:
                         intervention = INFECTION_BASELINE*np.prod(1. - interventions_applied_to_audience.intervention_value.values)
-                        
+
+                    print(interventions_applied_to_audience.intervention_value.values)
+                    print(intervention)
+
                     print(f"Intervention: {intervention}")
                     if np.random.random() < intervention:
                         #--Add new INFECTION record
@@ -193,7 +222,7 @@ def add_user_data_to_database( actor, audience , infection_or_intervention = Non
                         st.success(f"Thank you for submitting your information to WMM. The user {audience} was infected!")
                         
                         # Send infection email to the infected user
-                        #infection_email(audience)
+                        infection_email(audience, actor, success=True)
 
                     else:
                         #--Add new CONTACT record
@@ -207,6 +236,9 @@ def add_user_data_to_database( actor, audience , infection_or_intervention = Non
                                        , "timestamp"              :[current_date_time]}
                         st.success(f"Thank you for submitting your information to WMM. The user {audience} was *NOT* infected!")
                         
+                        # Send contact attempt email to the audience
+                        infection_email(audience, actor, success=False)
+                        
                     #--UPDATE state and write out (with concurrency protection)
                     new_row_df = pd.DataFrame(new_row)
                     save_dataset_to_csv_and_s3(new_row_df)
@@ -214,6 +246,18 @@ def add_user_data_to_database( actor, audience , infection_or_intervention = Non
             st.error("One or both of the fields is missing input. Please ensure both emails are entered correctly.")
     #--INTERVENTION------------------------------------------------------------------------------------------------------------
     else:
+       
+        effectiveness_data = intervention_data[intervention_type].dropna()
+        if effectiveness_data is None:
+            st.error(f"The intervention type {intervention_type} is not valid. Please select a valid intervention type.")
+            return
+        effectiveness_data = effectiveness_data.values
+        from scipy.stats import gaussian_kde
+
+        print(effectiveness_data)
+        kde = gaussian_kde(effectiveness_data/10.)
+
+
         if audience and actor:  # Check if not null
             if audience.lower() == "exp626":
                 st.error("The username 'exp626' cannot be used as the audience.")
@@ -243,7 +287,8 @@ def add_user_data_to_database( actor, audience , infection_or_intervention = Non
 
                 else:
 
-                    intervention_value_random = np.random.random() #<--this needs to change
+                    intervention_value_random = np.clip( kde.resample(1)[0][0],0,1)
+                    print(intervention_value_random)
                     
                     #--Add new intervention record
                     current_date_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -287,18 +332,33 @@ def infection_page():
         with cols[0]:
             st.markdown('By pressing submit, you consent that your Lehigh username will appear on this public website.')
 
-            #refresh_counter = st_autorefresh(interval=1*10**3, limit=100, key="dataframerefresh")
-            #if refresh_counter>=30:
             if st.button('Submit'):
                 add_user_data_to_database(infectorEmail, infecteeEmail, infection_or_intervention=1, intervention_type = -1)
-            #else:
-            #    st.warning("Please wait for 30 seconds after the page loads to submit.")
-            #    st.button('Submit', disabled=True)
 
 def intervention_page():
     infection_intervention=0
 
-    interventions = {1:"Intervention 01", 2:"Intervention 02", 3:"Intervention 03"}
+    try:
+        AWS_S3_BUCKET         = "wmm-2025"
+        AWS_ACCESS_KEY_ID     = st.secrets["AWS_ACCESS_KEY_ID"]
+        AWS_SECRET_ACCESS_KEY = st.secrets["AWS_SECRET_ACCESS_KEY"]
+        
+        s3_client = boto3.client(
+            "s3",
+            aws_access_key_id=AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=AWS_SECRET_ACCESS_KEY
+        )
+        
+        # Read the current data from S3 (get the latest version)
+        from io import BytesIO
+        s3_obj = s3_client.get_object(Bucket=AWS_S3_BUCKET, Key="intervention_effectiveness.csv")
+        intervention_effectiveness_data = pd.read_csv(BytesIO(s3_obj['Body'].read()))
+    except Exception as e:
+        print(f"Warning: Could not refresh data from S3: {str(e)}")
+
+    intervention_names = intervention_effectiveness_data.columns.tolist()
+
+    interventions = {intervention_name: intervention_name for intervention_name in intervention_names}
 
     with st.container(border=True):
         col = st.columns(1)
@@ -309,7 +369,11 @@ def intervention_page():
             audienceEmail = audienceEmail.lower().strip()
 
             if st.button('Submit'):
-                add_user_data_to_database(intervention_implemented, audienceEmail, infection_or_intervention=infection_intervention, intervention_type = intervention_implemented)
+                add_user_data_to_database(intervention_implemented
+                , audienceEmail
+                , infection_or_intervention=infection_intervention
+                , intervention_type = intervention_implemented
+                , intervention_data = intervention_effectiveness_data)
 
 def show():
 
