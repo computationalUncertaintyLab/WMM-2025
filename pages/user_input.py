@@ -354,7 +354,9 @@ def intervention_page():
         s3_obj = s3_client.get_object(Bucket=AWS_S3_BUCKET, Key="intervention_effectiveness.csv")
         intervention_effectiveness_data = pd.read_csv(BytesIO(s3_obj['Body'].read()))
     except Exception as e:
-        print(f"Warning: Could not refresh data from S3: {str(e)}")
+        print(f"Warning: Could not load intervention data from S3: {str(e)}")
+        st.error("Could not load intervention options. Please try again later.")
+        return
 
     intervention_names = intervention_effectiveness_data.columns.tolist()
 
