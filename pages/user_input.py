@@ -281,9 +281,9 @@ def add_user_data_to_database( actor, audience , infection_or_intervention = Non
                 if intervention_type in audience_interventions.intervention_type.unique():
                     st.warning(f"The user, {audience}, has already engaged with this intervention.")
                 
-                #--Check if the audience has already been infected
-                elif audience_infected:
-                    st.warning(f"{audience} has already been infected. Interventions are too late!")
+                #--Check if the audience has already been infected (PATCH: TURN OFF FOR NOW)
+                #elif audience_infected:
+                #    st.warning(f"{audience} has already been infected. Interventions are too late!")
 
                 else:
 
