@@ -1,7 +1,6 @@
 pandas
 numpy
 boto3
-streamlit
 streamlit_player
 streamlit_autorefresh
 pyvis
@@ -13,3 +12,5 @@ plotly
 google-auth
 google-auth-httplib2
 google-api-python-client
+streamlit>=1.25
+altair>=5
