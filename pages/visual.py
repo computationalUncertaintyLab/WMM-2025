@@ -151,7 +151,7 @@ def show_cumulative_plots():
     
     # Convert timestamp to datetime (local copy only)
     interactions['datetime'] = pd.to_datetime(interactions['timestamp'])
-    interactions['hour'] = interactions['datetime'].dt.floor('H')  # Round to nearest hour
+    interactions['hour'] = interactions['datetime'].dt.floor('h')  # Round to nearest hour
     
     # Create two columns for the visualizations
     col1, col2 = st.columns(2)
